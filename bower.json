@@ -9,6 +9,7 @@
   "dependencies": {
     "leaflet-dist": "~0.6.4",
     "zepto": "~1.0.0",
-    "leaflet-control-osm-geocoder": "*"
+    "leaflet-control-osm-geocoder": "*",
+    "leaflet-sidebar": "~0.1.1"
   }
 }
