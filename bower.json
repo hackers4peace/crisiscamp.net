@@ -1,0 +1,13 @@
+{
+  "name": "crisiscamp-map",
+  "version": "0.0.0",
+  "authors": [
+    "elf Pavlik <perpetual-tripper@wwelves.org>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "leaflet-dist": "~0.6.4",
+    "zepto": "~1.0.0"
+  }
+}
