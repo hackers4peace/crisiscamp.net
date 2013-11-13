@@ -8,4 +8,8 @@ Zepto ($) ->
     maxZoom: 19
   basemap.addTo map
 
+  geocoder = new L.Control.OSMGeocoder
+
+  map.addControl(geocoder)
+
 
