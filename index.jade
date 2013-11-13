@@ -9,9 +9,28 @@ html
     link(rel='stylesheet', href='/bower_components/leaflet-control-osm-geocoder/Control.OSMGeocoder.css')
     link(rel='stylesheet', href='screen.css')
 
+    script(src='/bower_components/lodash/dist/lodash.js')
+    script(src='/bower_components/backbone/backbone.js')
     script(src='/bower_components/leaflet-dist/leaflet.js')
     script(src='/bower_components/leaflet-sidebar/src/L.Control.Sidebar.js')
     script(src='/bower_components/leaflet-control-osm-geocoder/Control.OSMGeocoder.js')
     script(src='/bower_components/zepto/zepto.js')
+    script(src='/bower_components/js-md5/js/md5.js')
     script(src='app.js')
   body
+    script(id='infoTemplate', type='text/template')
+      h3 <%= name %>
+      a(href='<%= url %>') <%= url %>
+
+      p start: <%= startDate %>
+      p end: <%= endDate %>
+
+      h4 <%= location.name %>
+      a(href='<%= location.url %>') <%= location.url %>
+      p <%= location.address.streetAddress %>
+
+      h5 participants (<%= performer.length + attendee.length %>)
+        a(href'') JOIN
+      ul
+        li
+          <img src='<%= performer[0].image %>' title='<%= performer[0].name %>' />

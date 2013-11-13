@@ -37,3 +37,83 @@ Zepto ($) ->
 
   map.addControl geocoder
 
+  Backbone.$ = $
+
+  class Camp extends Backbone.Model
+    defaults:
+      '@type': 'schema:Event'
+      performer: []
+      attendee: []
+
+    latLng: ->
+      lat: @get('location').geo.latitude
+      lng: @get('location').geo.longitude
+
+  class CampInfo extends Backbone.View
+    render: ->
+      template = $('#infoTemplate').html()
+      sidebar.setContent _.template(template)(@model.toJSON())
+
+  class CampMarker extends Backbone.View
+    icon: new L.Icon
+      iconUrl: '/assets/images/markers/crisiscamp.png'
+      iconSize: [16, 16]
+
+    render: ->
+      marker = new L.Marker @model.latLng(), icon: @icon
+      marker.addTo map
+
+
+  class Place extends Backbone.Model
+    defaults:
+      '@type': 'schema:Place'
+
+  class Person extends Backbone.Model
+    defaults:
+      '@type': 'schema:Person'
+    initialize: ->
+      avatarHash = md5 @get('email')
+      @set 'image', 'http://www.gravatar.com/avatar/' + avatarHash
+
+  class Camps extends Backbone.Collection
+    model: Camp
+
+  camps = new Camps
+
+  spektral = new Place
+    name: 'Spektral'
+    url: 'http://spektral.at'
+    address:
+      '@type': 'schema:PostalAddress'
+      addressLocality: 'Graz'
+      streetAddress: 'Lendkai 45'
+    geo:
+      '@type': 'schema:GeoCoordinates'
+      latitude: 47.0708101
+      longitude: 15.4382918
+
+  graz = new Camp
+    name: 'Graz'
+    url: 'http://tiny.cc/CrisisCampGraz'
+    startDate: '2013-11-16T12:00+01:00'
+    endDate: '2013-11-16T19:00+01:00'
+    location: spektral.toJSON()
+
+  pavlik = new Person
+    name: 'elf Pavlik'
+    url: 'https://wwelves.org/perpetual-tripper'
+    email: 'perpetual-tripper@wwelves.org'
+
+  graz.get('performer').push pavlik.toJSON()
+  camps.add graz
+
+  grazMarker = new CampMarker model: graz
+  grazMarker.render()
+
+  grazInfo = new CampInfo model: graz
+  grazInfo.render()
+
+  sidebar.show()
+
+  # debug
+  window.camps = camps
