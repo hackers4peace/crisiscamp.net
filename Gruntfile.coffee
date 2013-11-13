@@ -9,9 +9,12 @@ module.exports = (grunt) ->
           livereload: true
 
     watch:
-      templates:
+      index:
         files: ['index.jade']
         tasks: ['jade']
+      templates:
+        files: ['templates/*.hbs']
+        tasks: ['handlebars']
       scripts:
         files: ['app.coffee']
         tasks: ['coffee']
@@ -19,15 +22,20 @@ module.exports = (grunt) ->
         files: ['screen.styl']
         tasks: ['stylus']
       livereload:
-        files: ['tmp/index.html', 'tmp/app.js', 'tmp/screen.css']
+        files: ['tmp/index.html', 'tmp/app.js', 'tmp/screen.css', 'tmp/templates.js']
         options:
           livereload: true
 
+    handlebars:
+      compile:
+        options:
+          namespace: 'JST'
+        files:
+          'tmp/templates.js': 'templates/*.hbs'
     jade:
       compile:
         files:
           'tmp/index.html': 'index.jade'
-
     coffee:
       compile:
         files:
@@ -44,5 +52,6 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-jade'
   grunt.loadNpmTasks 'grunt-contrib-coffee'
   grunt.loadNpmTasks 'grunt-contrib-stylus'
+  grunt.loadNpmTasks 'grunt-contrib-handlebars'
 
-  grunt.registerTask 'default', ['jade', 'coffee', 'stylus' , 'connect', 'watch']
+  grunt.registerTask 'default', ['handlebars', 'jade', 'coffee', 'stylus' , 'connect', 'watch']

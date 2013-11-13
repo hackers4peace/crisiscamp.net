@@ -1,0 +1,20 @@
+<h3>{{name}}</h3>
+<a href="{{ url }}">{{ url }}</a>
+
+<h4>{{location.name}}</h4>
+<a href="{{ location.url }}">{{ location.url }}</a>
+<p>{{ location.address.streetAddress }}</p>
+
+{{#if stub}}
+<a href="">ORGANIZE</a>
+{{else}}
+<h5> participants ({{performer.length}})</h5>
+<a href="">JOIN</a>
+<ul>
+  {{#each attendee}}
+  <li>
+    <img src="{{ this.image }}" title="{{ this.name }}" />
+  </li>
+  {{/each}}
+</ul>
+{{/if}}

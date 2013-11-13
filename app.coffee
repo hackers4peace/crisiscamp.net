@@ -32,27 +32,51 @@ Zepto ($) ->
       console.log(city)
       center = new L.LatLng city.lat, city.lon
       @_map.setView center, 6
-      sidebar.setContent '<h3>' + name + '</h3>'
+      camp = camps.findWhere name: name
+      unless camp
+        place = new Place
+          geo:
+            latitude: city.lat
+            longitude: city.lon
+        camp = new Camp name: name, location: place.toJSON(), stub: true
+      campInfo = new CampInfo model: camp
+      campInfo.render()
       sidebar.show()
 
   map.addControl geocoder
 
   Backbone.$ = $
 
+  class Person extends Backbone.Model
+    defaults:
+      '@type': 'schema:Person'
+    initialize: ->
+      avatarHash = md5 @get('email')
+      @set 'image', 'http://www.gravatar.com/avatar/' + avatarHash
+
+  class Place extends Backbone.Model
+    defaults:
+      '@type': 'schema:Place'
+
   class Camp extends Backbone.Model
     defaults:
       '@type': 'schema:Event'
-      performer: []
-      attendee: []
+
+    initialize: ->
+      @set 'performer', []
+      @set 'attendee', []
 
     latLng: ->
       lat: @get('location').geo.latitude
       lng: @get('location').geo.longitude
 
+  class Camps extends Backbone.Collection
+    model: Camp
+
   class CampInfo extends Backbone.View
+    template: JST['templates/campInfo.hbs']
     render: ->
-      template = $('#infoTemplate').html()
-      sidebar.setContent _.template(template)(@model.toJSON())
+      sidebar.setContent @template(@model.toJSON())
 
   class CampMarker extends Backbone.View
     icon: new L.Icon
@@ -62,21 +86,6 @@ Zepto ($) ->
     render: ->
       marker = new L.Marker @model.latLng(), icon: @icon
       marker.addTo map
-
-
-  class Place extends Backbone.Model
-    defaults:
-      '@type': 'schema:Place'
-
-  class Person extends Backbone.Model
-    defaults:
-      '@type': 'schema:Person'
-    initialize: ->
-      avatarHash = md5 @get('email')
-      @set 'image', 'http://www.gravatar.com/avatar/' + avatarHash
-
-  class Camps extends Backbone.Collection
-    model: Camp
 
   camps = new Camps
 
@@ -111,9 +120,8 @@ Zepto ($) ->
   grazMarker.render()
 
   grazInfo = new CampInfo model: graz
-  grazInfo.render()
-
-  sidebar.show()
+  #grazInfo.render()
+  #sidebar.show()
 
   # debug
   window.camps = camps
