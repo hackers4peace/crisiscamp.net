@@ -94,12 +94,18 @@ Zepto ($) ->
     join: (camp) =>
       if @authenticated
         console.log 'Person.join()', camp
-        @camp.attendees.remove @ if @camp
-        camp.attendees.add @
+        @leave() if @camp
         @camp = camp
+        @camp.attendees.add @
       else
         @login()
         @_defer = method: @join, arg: camp
+    leave: =>
+      if @authenticated
+        console.log 'Person.leave()', @camp
+        camp = @camp            #
+        @camp = undefined      ## before remove for checks in vews!
+        camp.attendees.remove @ #
     start: (camp) =>
       if @authenticated
         console.log 'Person.start()', camp
@@ -139,18 +145,23 @@ Zepto ($) ->
   class CampInfo extends Backbone.View
     template: JST['templates/campInfo.hbs']
     events:
-      'click .join': 'join'
       'click .start': 'start'
+      'click .join': 'join'
+      'click .leave': 'leave'
     initialize: ->
       @model.on 'change', @render
     render: =>
-      @$el.html @template @model.toJSON()
+      data = @model.toJSON()
+      data.current = true if user.camp == @model
+      @$el.html @template data
       $('#sidebar').html @el
       @
-    join:  ->
-      user.join @model
     start: ->
       user.start @model
+    join:  ->
+      user.join @model
+    leave:  ->
+      user.leave()
 
   class CampMarker extends Backbone.View
     icon: new L.Icon

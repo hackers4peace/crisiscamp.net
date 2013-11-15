@@ -9,7 +9,11 @@
 <button class="start">START</button>
 {{else}}
 <h5> participants ({{attendee.length}})</h5>
+{{#if current}}
+<button class="leave">LEAVE</button>
+{{else}}
 <button class="join">JOIN</button>
+{{/if}}
 <ul>
   {{#each attendee}}
   <li>
