@@ -6,10 +6,10 @@
 <p>{{ location.address.streetAddress }}</p>
 
 {{#if stub}}
-<a href="">ORGANIZE</a>
+<button class="start">START</button>
 {{else}}
-<h5> participants ({{performer.length}})</h5>
-<a href="">JOIN</a>
+<h5> participants ({{attendee.length}})</h5>
+<button class="join">JOIN</button>
 <ul>
   {{#each attendee}}
   <li>

@@ -1,3 +1,26 @@
+#https://gist.github.com/lagartoflojo/1821349
+Backbone.Model::nestCollection = (attributeName, nestedCollection) ->
+  #setup nested references
+  for item, i in nestedCollection
+    @attributes[attributeName][i] = nestedCollection.at(i).attributes
+
+  #create empty arrays if none
+  nestedCollection.on 'add', (initiative) =>
+    if !@get(attributeName)
+      @attributes[attributeName] = []
+      @get(attributeName).push initiative.attributes
+
+  nestedCollection.on 'remove', (initiative) =>
+    updateObj = {}
+    updateObj[attributeName] = _.without @get(attributeName), initiative.attributes
+    @set updateObj
+
+  nestedCollection
+
+Backbone.Model::nestModel = (attributeName, nestedModel) ->
+  @attributes[attributeName] = nestedModel.attributes
+  nestedModel
+
 Zepto ($) ->
 
   # map
@@ -15,13 +38,6 @@ Zepto ($) ->
 
   zoom = new L.Control.Zoom position: 'bottomright'
   map.addControl zoom
-
-  # sidebar
-  $('body').append '<div id="sidebar"></div>'
-  sidebar = new L.Control.Sidebar 'sidebar',
-    position: 'left'
-
-  map.addControl sidebar
 
   # geocoder
   geocoder = new L.Control.OSMGeocoder
@@ -41,18 +57,56 @@ Zepto ($) ->
         camp = new Camp name: name, location: place.toJSON(), stub: true
       campInfo = new CampInfo model: camp
       campInfo.render()
-      sidebar.show()
+      #sidebar.show()
 
   map.addControl geocoder
 
   Backbone.$ = $
 
+  class Sidebar extends Backbone.View
+    id: 'sidebar'
+    render: ->
+      $('body').append @el
+      @
+
+  sidebar = new Sidebar
+  sidebar.render()
+
   class Person extends Backbone.Model
     defaults:
       '@type': 'schema:Person'
     initialize: ->
-      avatarHash = md5 @get('email')
-      @set 'image', 'http://www.gravatar.com/avatar/' + avatarHash
+      @on 'authenticated', @auth
+      @on 'change:email', =>
+        avatarHash = md5 @get('email')
+        @set 'image', 'http://www.gravatar.com/avatar/' + avatarHash
+    login: ->
+      navigator.id.request()
+    logout: ->
+      navigator.id.logout()
+    auth: (persona) =>
+        @set 'email', persona.email
+        @authenticated = true
+        @_defered() if @_defer #FIXME use promisses
+    authenticated: false
+    join: (camp) =>
+      if @authenticated
+        console.log 'Person.join()', camp
+      else
+        @login()
+        @_defer = method: @join, arg: camp
+    start: (camp) =>
+      if @authenticated
+        console.log 'Person.start()', camp
+      else
+        @login()
+        @_defer = method: @start, arg: camp
+    _defered: () =>
+      @_defer.method.call(@, @_defer.arg)
+
+
+  class Team extends Backbone.Collection
+    model: Person
 
   class Place extends Backbone.Model
     defaults:
@@ -63,8 +117,8 @@ Zepto ($) ->
       '@type': 'schema:Event'
 
     initialize: ->
-      @set 'performer', []
-      @set 'attendee', []
+      @location = @nestModel 'location', new Place(@get 'location')
+      @attendees = @nestCollection 'attendee', new Team(@get 'attendee')
 
     latLng: ->
       lat: @get('location').geo.latitude
@@ -75,8 +129,17 @@ Zepto ($) ->
 
   class CampInfo extends Backbone.View
     template: JST['templates/campInfo.hbs']
+    events:
+      'click .join': 'join'
+      'click .start': 'start'
     render: ->
-      sidebar.setContent @template(@model.toJSON())
+      @$el.html @template @model.toJSON()
+      $('#sidebar').html @el
+      @
+    join:  ->
+      user.join @model
+    start: ->
+      user.start @model
 
   class CampMarker extends Backbone.View
     icon: new L.Icon
@@ -106,22 +169,34 @@ Zepto ($) ->
     url: 'http://tiny.cc/CrisisCampGraz'
     startDate: '2013-11-16T12:00+01:00'
     endDate: '2013-11-16T19:00+01:00'
-    location: spektral.toJSON()
-
-  pavlik = new Person
-    name: 'elf Pavlik'
-    url: 'https://wwelves.org/perpetual-tripper'
-    email: 'perpetual-tripper@wwelves.org'
-
-  graz.get('performer').push pavlik.toJSON()
+  graz.location.set spektral.toJSON()
   camps.add graz
+
+  #pavlik = new Person
+    #name: 'elf Pavlik'
+    #url: 'https://wwelves.org/perpetual-tripper'
+    #email: 'perpetual-tripper@wwelves.org'
+  #graz.attendees.add pavlik
+
 
   grazMarker = new CampMarker model: graz
   grazMarker.render()
 
-  grazInfo = new CampInfo model: graz
-  #grazInfo.render()
-  #sidebar.show()
+  user = new Person
 
   # debug
   window.camps = camps
+  window.user = user
+
+  navigator.id.watch
+    loggedInUser: null
+    onlogin: (assertion) ->
+      user.assertion = assertion
+      $.post 'http://localhost:9000/auth/login', { assertion: assertion }, (response) ->
+        json = JSON.parse(response)
+        console.log json
+        user.trigger 'authenticated', json
+    onlogout: ->
+      $.post 'http://localhost:9000/auth/logout', { assertion: user.assertion }, (response) ->
+        console.log response
+        user.authenticated = false
