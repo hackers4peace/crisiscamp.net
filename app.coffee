@@ -8,12 +8,14 @@ Backbone.Model::nestCollection = (attributeName, nestedCollection) ->
   nestedCollection.on 'add', (initiative) =>
     if !@get(attributeName)
       @attributes[attributeName] = []
-      @get(attributeName).push initiative.attributes
+    @get(attributeName).push initiative.attributes
+    @trigger 'change'
 
   nestedCollection.on 'remove', (initiative) =>
     updateObj = {}
     updateObj[attributeName] = _.without @get(attributeName), initiative.attributes
     @set updateObj
+    @trigger 'change'
 
   nestedCollection
 
@@ -92,12 +94,19 @@ Zepto ($) ->
     join: (camp) =>
       if @authenticated
         console.log 'Person.join()', camp
+        @camp.attendees.remove @ if @camp
+        camp.attendees.add @
+        @camp = camp
       else
         @login()
         @_defer = method: @join, arg: camp
     start: (camp) =>
       if @authenticated
         console.log 'Person.start()', camp
+        new CampMarker model: camp
+        camps.add camp
+        delete camp.attributes.stub
+        @join camp
       else
         @login()
         @_defer = method: @start, arg: camp
@@ -132,7 +141,9 @@ Zepto ($) ->
     events:
       'click .join': 'join'
       'click .start': 'start'
-    render: ->
+    initialize: ->
+      @model.on 'change', @render
+    render: =>
       @$el.html @template @model.toJSON()
       $('#sidebar').html @el
       @
@@ -145,10 +156,12 @@ Zepto ($) ->
     icon: new L.Icon
       iconUrl: '/assets/images/markers/crisiscamp.png'
       iconSize: [16, 16]
-
+    initialize: ->
+      @render()
     render: ->
       marker = new L.Marker @model.latLng(), icon: @icon
       marker.addTo map
+      @
 
   camps = new Camps
 
@@ -169,18 +182,12 @@ Zepto ($) ->
     url: 'http://tiny.cc/CrisisCampGraz'
     startDate: '2013-11-16T12:00+01:00'
     endDate: '2013-11-16T19:00+01:00'
+    attendee: []
   graz.location.set spektral.toJSON()
   camps.add graz
 
-  #pavlik = new Person
-    #name: 'elf Pavlik'
-    #url: 'https://wwelves.org/perpetual-tripper'
-    #email: 'perpetual-tripper@wwelves.org'
-  #graz.attendees.add pavlik
-
 
   grazMarker = new CampMarker model: graz
-  grazMarker.render()
 
   user = new Person
 
