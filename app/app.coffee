@@ -143,7 +143,7 @@ Zepto ($) ->
     model: Camp
 
   class CampInfo extends Backbone.View
-    template: JST['templates/campInfo.hbs']
+    template: JST['app/templates/campInfo.hbs']
     events:
       'click .start': 'start'
       'click .join': 'join'

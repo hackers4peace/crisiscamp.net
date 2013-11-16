@@ -7,22 +7,23 @@ module.exports = (grunt) ->
           port: 8000
           hostname: '*'
           livereload: true
+          base: 'public'
 
     watch:
       index:
-        files: ['index.jade']
+        files: ['app/index.jade']
         tasks: ['jade']
       templates:
-        files: ['templates/*.hbs']
+        files: ['app/templates/*.hbs']
         tasks: ['handlebars']
       scripts:
-        files: ['app.coffee']
+        files: ['app/app.coffee']
         tasks: ['coffee']
       styles:
-        files: ['screen.styl']
+        files: ['app/screen.styl']
         tasks: ['stylus']
       livereload:
-        files: ['tmp/index.html', 'tmp/app.js', 'tmp/screen.css', 'tmp/templates.js']
+        files: ['public/index.html', 'public/app.js', 'public/screen.css', 'public/templates.js']
         options:
           livereload: true
 
@@ -31,21 +32,21 @@ module.exports = (grunt) ->
         options:
           namespace: 'JST'
         files:
-          'tmp/templates.js': 'templates/*.hbs'
+          'public/templates.js': 'app/templates/*.hbs'
     jade:
       compile:
         files:
-          'tmp/index.html': 'index.jade'
+          'public/index.html': 'app/index.jade'
     coffee:
       compile:
         files:
-          'tmp/app.js': 'app.coffee'
+          'public/app.js': 'app/app.coffee'
         options:
           sourceMap: true
     stylus:
       compile:
         files:
-          'tmp/screen.css': 'screen.styl'
+          'public/screen.css': 'app/screen.styl'
 
   grunt.loadNpmTasks 'grunt-contrib-connect'
   grunt.loadNpmTasks 'grunt-contrib-watch'
