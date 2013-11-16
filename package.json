@@ -1,5 +1,5 @@
 {
-  "name": "crisiscamp-map",
+  "name": "crisiscamp.net",
   "version": "0.0.0",
   "description": "",
   "main": "index.js",
@@ -7,7 +7,12 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "BSD",
+  "license": "Unlicense",
+  "dependencies": {
+    "cors": "~2.1.0",
+    "express": "~3.4.4",
+    "superagent": "~0.15.7"
+  },
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-contrib-connect": "~0.5.0",
@@ -15,6 +20,7 @@
     "grunt-contrib-coffee": "~0.7.0",
     "grunt-contrib-stylus": "~0.10.0",
     "grunt-contrib-jade": "~0.8.0",
-    "grunt-contrib-handlebars": "~0.6.0"
+    "grunt-contrib-handlebars": "~0.6.0",
+    "grunt-develop": "~0.2.2"
   }
 }

@@ -26,6 +26,11 @@ module.exports = (grunt) ->
         files: ['public/index.html', 'public/app.js', 'public/screen.css', 'public/templates.js']
         options:
           livereload: true
+      daemon:
+        files: ['daemon/daemon.coffee']
+        tasks: ['develop']
+        options:
+          nospawn: true
 
     handlebars:
       compile:
@@ -48,11 +53,17 @@ module.exports = (grunt) ->
         files:
           'public/screen.css': 'app/screen.styl'
 
+    develop:
+      daemon:
+        file: 'daemon/daemon.coffee'
+        cmd: 'coffee'
+
   grunt.loadNpmTasks 'grunt-contrib-connect'
   grunt.loadNpmTasks 'grunt-contrib-watch'
   grunt.loadNpmTasks 'grunt-contrib-jade'
   grunt.loadNpmTasks 'grunt-contrib-coffee'
   grunt.loadNpmTasks 'grunt-contrib-stylus'
   grunt.loadNpmTasks 'grunt-contrib-handlebars'
+  grunt.loadNpmTasks 'grunt-develop'
 
-  grunt.registerTask 'default', ['handlebars', 'jade', 'coffee', 'stylus' , 'connect', 'watch']
+  grunt.registerTask 'default', ['handlebars', 'jade', 'coffee', 'stylus' , 'connect', 'develop', 'watch']
