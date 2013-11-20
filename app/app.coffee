@@ -25,10 +25,14 @@ Backbone.Model::nestModel = (attributeName, nestedModel) ->
 
 Zepto ($) ->
 
+  config =
+    map:
+      center: [30, 0]
+
   # map
   $('body').append '<div id="map"></div>'
   map = new L.Map 'map',
-    center: [30, 0]
+    center: config.map.center
     zoom: 2
     zoomControl: false
     attributionControl: false
@@ -41,44 +45,36 @@ Zepto ($) ->
   zoom = new L.Control.Zoom position: 'bottomright'
   map.addControl zoom
 
+  # sidebar
+  $('body').append '<div id="sidebar"></div>'
+
   # geocoder
   geocoder = new L.Control.OSMGeocoder
     text: 'find / add'
     callback: (result) ->
       city = result[0]
       name = city.display_name.split(',')[0]
-      console.log(city)
       center = new L.LatLng city.lat, city.lon
-      @_map.setView center, 6
-      camp = camps.findWhere name: name
-      unless camp
+
+      place = places.findWhere name: name
+      unless place
         place = new Place
+          name: name
           geo:
             latitude: city.lat
             longitude: city.lon
-        camp = new Camp name: name, location: place.toJSON(), stub: true
-      campInfo = new CampInfo model: camp
-      campInfo.render()
-      #sidebar.show()
+        places.add place
+      router.navigate place.get('name').toLowerCase(), trigger: true
 
   map.addControl geocoder
 
   Backbone.$ = $
 
-  class Sidebar extends Backbone.View
-    id: 'sidebar'
-    render: ->
-      $('body').append @el
-      @
-
-  sidebar = new Sidebar
-  sidebar.render()
-
   class Person extends Backbone.Model
     defaults:
       '@type': 'schema:Person'
     initialize: ->
-      @on 'authenticated', @auth
+      @on 'authenticated', @auth #FIXME check if not fail!
       @on 'change:email', =>
         avatarHash = md5 @get('email')
         @set 'image', 'http://www.gravatar.com/avatar/' + avatarHash
@@ -96,7 +92,7 @@ Zepto ($) ->
         console.log 'Person.join()', camp
         @leave() if @camp
         @camp = camp
-        @camp.attendees.add @
+        @camp.join @
       else
         @login()
         @_defer = method: @join, arg: camp
@@ -105,12 +101,11 @@ Zepto ($) ->
         console.log 'Person.leave()', @camp
         camp = @camp            #
         @camp = undefined      ## before remove for checks in vews!
-        camp.attendees.remove @ #
+        camp.leave @ #
     start: (camp) =>
       if @authenticated
         console.log 'Person.start()', camp
         new CampMarker model: camp
-        camps.add camp
         delete camp.attributes.stub
         @join camp
       else
@@ -127,6 +122,11 @@ Zepto ($) ->
     defaults:
       '@type': 'schema:Place'
 
+  class Places extends Backbone.Collection
+    model: Place
+
+  places = new Places
+
   class Camp extends Backbone.Model
     defaults:
       '@type': 'schema:Event'
@@ -134,6 +134,12 @@ Zepto ($) ->
     initialize: ->
       @location = @nestModel 'location', new Place(@get 'location')
       @attendees = @nestCollection 'attendee', new Team(@get 'attendee')
+
+    join: (person) ->
+      @attendees.add person
+
+    leave: (person) ->
+      @attendees.remove person
 
     latLng: ->
       lat: @get('location').geo.latitude
@@ -150,6 +156,7 @@ Zepto ($) ->
       'click .leave': 'leave'
     initialize: ->
       @model.on 'change', @render
+      @render()
     render: =>
       data = @model.toJSON()
       data.current = true if user.camp == @model
@@ -169,10 +176,13 @@ Zepto ($) ->
       iconSize: [16, 16]
     initialize: ->
       @render()
-    render: ->
+    render: =>
       marker = new L.Marker @model.latLng(), icon: @icon
+      marker.on 'click', @goTo.bind(@model)
       marker.addTo map
-      @
+      marker
+    goTo: ->
+      router.navigate @get('name').toLowerCase(), trigger: true
 
   camps = new Camps
 
@@ -218,3 +228,25 @@ Zepto ($) ->
       $.post 'http://localhost:9000/auth/logout', { assertion: user.assertion }, (response) ->
         console.log response
         user.authenticated = false
+
+  class Router extends Backbone.Router
+    routes:
+      '': 'index'
+      ':city': 'show'
+    index: ->
+      map.setView config.map.center, 2
+      $('#sidebar').html ''
+      $('#sidebar').hide()
+    show: (city) ->
+      camp = camps.findWhere name: city.charAt(0).toUpperCase() + city.slice(1)
+      unless camp
+        place = places.findWhere name: city.charAt(0).toUpperCase() + city.slice(1)
+        camp = new Camp name: name, location: place.toJSON(), stub: true
+        camps.add camp
+      campInfo = new CampInfo model: camp
+      map.setView [camp.latLng().lat, camp.latLng().lng], 6
+      $('#sidebar').show()
+
+  router = new Router
+
+  Backbone.history.start pushState: true
