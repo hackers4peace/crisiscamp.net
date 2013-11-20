@@ -1,28 +1,3 @@
-#https://gist.github.com/lagartoflojo/1821349
-Backbone.Model::nestCollection = (attributeName, nestedCollection) ->
-  #setup nested references
-  for item, i in nestedCollection
-    @attributes[attributeName][i] = nestedCollection.at(i).attributes
-
-  #create empty arrays if none
-  nestedCollection.on 'add', (initiative) =>
-    if !@get(attributeName)
-      @attributes[attributeName] = []
-    @get(attributeName).push initiative.attributes
-    @trigger 'change'
-
-  nestedCollection.on 'remove', (initiative) =>
-    updateObj = {}
-    updateObj[attributeName] = _.without @get(attributeName), initiative.attributes
-    @set updateObj
-    @trigger 'change'
-
-  nestedCollection
-
-Backbone.Model::nestModel = (attributeName, nestedModel) ->
-  @attributes[attributeName] = nestedModel.attributes
-  nestedModel
-
 Zepto ($) ->
 
   config =
@@ -70,7 +45,7 @@ Zepto ($) ->
 
   Backbone.$ = $
 
-  class Person extends Backbone.Model
+  class Person extends Backbone.RelationalModel
     defaults:
       '@type': 'schema:Person'
     initialize: ->
@@ -114,11 +89,10 @@ Zepto ($) ->
     _defered: () =>
       @_defer.method.call(@, @_defer.arg)
 
-
   class Team extends Backbone.Collection
     model: Person
 
-  class Place extends Backbone.Model
+  class Place extends Backbone.RelationalModel
     defaults:
       '@type': 'schema:Place'
 
@@ -127,23 +101,29 @@ Zepto ($) ->
 
   places = new Places
 
-  class Camp extends Backbone.Model
+  class Camp extends Backbone.RelationalModel
+    relations: [{
+      type: Backbone.HasOne
+      key: 'location'
+      relatedModel: Place
+    },{
+      type: Backbone.HasMany
+      key: 'attendee'
+      relatedModel: Person
+      collectionType: Team
+    }]
     defaults:
       '@type': 'schema:Event'
 
-    initialize: ->
-      @location = @nestModel 'location', new Place(@get 'location')
-      @attendees = @nestCollection 'attendee', new Team(@get 'attendee')
-
     join: (person) ->
-      @attendees.add person
+      @get('attendee').add person
 
     leave: (person) ->
-      @attendees.remove person
+      @get('attendee').remove person
 
     latLng: ->
-      lat: @get('location').geo.latitude
-      lng: @get('location').geo.longitude
+      lat: @get('location').get('geo').latitude
+      lng: @get('location').get('geo').longitude
 
   class Camps extends Backbone.Collection
     model: Camp
@@ -156,6 +136,8 @@ Zepto ($) ->
       'click .leave': 'leave'
     initialize: ->
       @model.on 'change', @render
+      @model.on 'add:attendee', @render
+      @model.on 'remove:attendee', @render
       @render()
     render: =>
       data = @model.toJSON()
@@ -186,7 +168,7 @@ Zepto ($) ->
 
   camps = new Camps
 
-  spektral = new Place
+  spektral =
     name: 'Spektral'
     url: 'http://spektral.at'
     address:
@@ -203,8 +185,8 @@ Zepto ($) ->
     url: 'http://tiny.cc/CrisisCampGraz'
     startDate: '2013-11-16T12:00+01:00'
     endDate: '2013-11-16T19:00+01:00'
-    attendee: []
-  graz.location.set spektral.toJSON()
+
+  graz.set 'location', spektral
   camps.add graz
 
 
@@ -234,7 +216,6 @@ Zepto ($) ->
       '': 'index'
       ':city': 'show'
     index: ->
-      map.setView config.map.center, 2
       $('#sidebar').html ''
       $('#sidebar').hide()
     show: (city) ->
@@ -244,7 +225,6 @@ Zepto ($) ->
         camp = new Camp name: name, location: place.toJSON(), stub: true
         camps.add camp
       campInfo = new CampInfo model: camp
-      map.setView [camp.latLng().lat, camp.latLng().lng], 6
       $('#sidebar').show()
 
   router = new Router
