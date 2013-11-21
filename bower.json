@@ -9,8 +9,6 @@
   "dependencies": {
     "leaflet-dist": "~0.6.4",
     "zepto": "~1.0.0",
-    "leaflet-control-osm-geocoder": "*",
-    "leaflet-sidebar": "~0.1.1",
     "lodash": "~2.3.0",
     "backbone": "~1.1.0",
     "js-md5": "~1.1.0",

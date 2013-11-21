@@ -3,6 +3,13 @@ Zepto ($) ->
   config =
     map:
       center: [30, 0]
+    search:
+      nominatim:
+        url: 'http://nominatim.openstreetmap.org/search'
+
+  # handlebars helpers
+  Handlebars.registerHelper 'day', (date) ->
+    date.split('T')[0]
 
   # map
   $('body').append '<div id="map"></div>'
@@ -22,26 +29,6 @@ Zepto ($) ->
 
   # sidebar
   $('body').append '<div id="sidebar"></div>'
-
-  # geocoder
-  geocoder = new L.Control.OSMGeocoder
-    text: 'find / add'
-    callback: (result) ->
-      city = result[0]
-      name = city.display_name.split(',')[0]
-      center = new L.LatLng city.lat, city.lon
-
-      place = places.findWhere name: name
-      unless place
-        place = new Place
-          name: name
-          geo:
-            latitude: city.lat
-            longitude: city.lon
-        places.add place
-      router.navigate place.get('name').toLowerCase(), trigger: true
-
-  map.addControl geocoder
 
   Backbone.$ = $
 
@@ -95,6 +82,9 @@ Zepto ($) ->
   class Place extends Backbone.RelationalModel
     defaults:
       '@type': 'schema:Place'
+    latLng: ->
+      lat: @get('geo').latitude
+      lng: @get('geo').longitude
 
   class Places extends Backbone.Collection
     model: Place
@@ -106,6 +96,9 @@ Zepto ($) ->
       type: Backbone.HasOne
       key: 'location'
       relatedModel: Place
+      reverseRelation:
+        type: Backbone.HasMany
+        key: 'event'
     },{
       type: Backbone.HasMany
       key: 'attendee'
@@ -128,6 +121,20 @@ Zepto ($) ->
   class Camps extends Backbone.Collection
     model: Camp
 
+  class CityInfo extends Backbone.View
+    template: JST['app/templates/cityInfo.hbs']
+    events:
+      'click li': 'showCamp'
+    initialize: ->
+      @render()
+    render: ->
+      @$el.html @template(@model.toJSON())
+      $('#sidebar').html @el
+      $('#sidebar').show()
+      @el
+    showCamp: (e) ->
+      router.navigate @model.get('name').toLowerCase() + '/' + e.target.innerHTML, trigger: true
+
   class CampInfo extends Backbone.View
     template: JST['app/templates/campInfo.hbs']
     events:
@@ -143,8 +150,10 @@ Zepto ($) ->
       data = @model.toJSON()
       data.current = true if user.camp == @model
       @$el.html @template data
+      console.log 'CampInfo.render()', @el
       $('#sidebar').html @el
-      @
+      $('#sidebar').show()
+      @el
     start: ->
       user.start @model
     join:  ->
@@ -180,23 +189,27 @@ Zepto ($) ->
       latitude: 47.0708101
       longitude: 15.4382918
 
-  graz = new Camp
+  graz = new Place
+    name: 'Graz'
+    geo:
+      latitude: 47.0708101
+      longitude: 15.4382918
+
+  places.add graz
+
+  first = new Camp
     name: 'Graz'
     url: 'http://tiny.cc/CrisisCampGraz'
     startDate: '2013-11-16T12:00+01:00'
     endDate: '2013-11-16T19:00+01:00'
 
-  graz.set 'location', spektral
-  camps.add graz
-
+  first.set 'location', spektral
+  camps.add first
+  graz.get('event').add first
 
   grazMarker = new CampMarker model: graz
 
   user = new Person
-
-  # debug
-  window.camps = camps
-  window.user = user
 
   navigator.id.watch
     loggedInUser: null
@@ -204,29 +217,58 @@ Zepto ($) ->
       user.assertion = assertion
       $.post 'http://localhost:9000/auth/login', { assertion: assertion }, (response) ->
         json = JSON.parse(response)
-        console.log json
+        console.log 'Persona.onlogin()', json
         user.trigger 'authenticated', json
     onlogout: ->
       $.post 'http://localhost:9000/auth/logout', { assertion: user.assertion }, (response) ->
-        console.log response
+        console.log 'Persona.onlogout()', response
         user.authenticated = false
 
   class Router extends Backbone.Router
     routes:
       '': 'index'
-      ':city': 'show'
+      ':cityName': 'city'
+      ':cityName/:campDate': 'camp'
     index: ->
       $('#sidebar').html ''
       $('#sidebar').hide()
-    show: (city) ->
-      camp = camps.findWhere name: city.charAt(0).toUpperCase() + city.slice(1)
-      unless camp
-        place = places.findWhere name: city.charAt(0).toUpperCase() + city.slice(1)
-        camp = new Camp name: name, location: place.toJSON(), stub: true
-        camps.add camp
-      campInfo = new CampInfo model: camp
-      $('#sidebar').show()
+    city: (cityName) ->
+      place = places.findWhere name: cityName.charAt(0).toUpperCase() + cityName.slice(1)
+      if place
+        new CityInfo model: place
+      else
+        @search cityName
+    camp: (cityName, campDate) ->
+      @city cityName
+      camp = camps.find (c) ->
+        if c.get('location').get('name').toLowerCase() != cityName.toLowerCase()
+          return false
+        c.get('startDate').split('T')[0] == campDate
+      new CampInfo model: camp
+    search: (query) ->
+      $.getJSON config.search.nominatim.url, { q: query, format: 'jsonv2' }, (response) =>
+        city = response[0]
+        name = city.display_name.split(',')[0]
+        center = new L.LatLng city.lat, city.lon
+
+        place = places.findWhere name: name
+        unless place
+          place = new Place
+            name: name
+            geo:
+              latitude: city.lat
+              longitude: city.lon
+          places.add place
+        @city place.get('name').toLowerCase()
 
   router = new Router
 
   Backbone.history.start pushState: true
+
+  # debug
+  window.app =
+    camps: camps
+    user: user
+    router: router
+    places: places
+

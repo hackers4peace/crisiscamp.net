@@ -21,11 +21,8 @@ daemon.post '/auth/logout', (req, res) ->
   console.log req.body.assertion
   res.send 200
 
-daemon.get '/:city', (req, res) ->
+daemon.get '/:city/:shortDate?', (req, res) ->
   res.sendfile __dirname.replace('daemon', 'public/index.html')
-daemon.post '/:city/join', (req, res) ->
-daemon.post '/:city/leave', (req, res) ->
-daemon.post '/:city/start', (req, res) ->
 
 server = http.createServer daemon
 server.listen 9000
