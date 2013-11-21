@@ -29,5 +29,5 @@ daemon.get('/:city/:shortDate?', function(req, res){
   res.sendfile(__dirname.replace('daemon', 'public/index.html'));
 });
 
-server = http.createServer(daemon);
+var server = http.createServer(daemon);
 server.listen(9000);

@@ -16,13 +16,9 @@ module.exports = function(grunt){
         files: ['app/index.jade'],
         tasks: ['jade']
       },
-      templates: {
-        files: ['app/templates/*.hbs'],
-        tasks: ['handlebars']
-      },
       scripts: {
-        files: ['app/app.coffee'],
-        tasks: ['coffee']
+        files: ['app/**/*.js', 'lib/**/*.js'],
+        tasks: ['browserify']
       },
       styles: {
         files: ['app/screen.styl'],
@@ -39,16 +35,6 @@ module.exports = function(grunt){
         tasks: ['develop'],
         options: {
           nospawn: true
-        }
-      }
-    },
-    handlebars: {
-      compile: {
-        options: {
-          namespace: 'JST'
-        },
-        files: {
-          'public/templates.js': 'app/templates/*.hbs'
         }
       }
     },
@@ -71,6 +57,15 @@ module.exports = function(grunt){
         file: 'daemon/daemon.js',
         cmd: 'node'
       }
+    },
+    browserify: {
+      app: {
+        src: ['app/app.js'],
+        dest: 'public/bundle.js',
+        options: {
+          transform: ['hbsfy']
+        }
+      }
     }
   });
 
@@ -78,8 +73,8 @@ module.exports = function(grunt){
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-jade');
   grunt.loadNpmTasks('grunt-contrib-stylus');
-  grunt.loadNpmTasks('grunt-contrib-handlebars');
   grunt.loadNpmTasks('grunt-develop');
+  grunt.loadNpmTasks('grunt-browserify');
 
-  grunt.registerTask('default', ['handlebars', 'jade', 'stylus' , 'connect', 'develop', 'watch']);
+  grunt.registerTask('default', ['browserify', 'jade', 'stylus' , 'connect', 'develop', 'watch']);
 };
